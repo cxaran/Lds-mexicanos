@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tablero — 1 pregunta a la vez (clic para revelar)</title>
+<style>
+  :root{
+    /* Noche mexicana */
+    --bg:#06110a; --bg2:#091326; --card:#0b1410; --ink:#f8fafc;
+    --muted:#b7c6bf; --accent:#d12d2d; --gold:#c2a64a; --border:#143426;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 600px at 70% -10%, var(--bg2) 0%, rgba(0,0,0,0) 60%),
+      linear-gradient(180deg, var(--bg) 0%, #000 100%);
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+    padding:1rem 1.25rem; position:sticky; top:0;
+    background:linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,.35));
+    border-bottom:1px solid var(--border); z-index:10
+  }
+  h1{margin:0; font-size:clamp(1.1rem, 2vw + .6rem, 1.6rem); text-shadow:0 1px 0 #000}
+  .controls{display:flex; gap:.5rem; flex-wrap:wrap}
+  button{
+    background:var(--accent); border:1px solid #7a1414; color:#fff; font-weight:800;
+    padding:.6rem .9rem; border-radius:.75rem; cursor:pointer; text-shadow:0 1px 0 rgba(0,0,0,.3)
+  }
+  button.ghost{background:transparent; color:var(--ink); border:1px solid var(--border)}
+  main{padding:1.2rem; max-width:1100px; margin:0 auto}
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+    border:1px solid var(--border); border-radius:1rem; padding:1rem 1rem 1.1rem;
+    box-shadow: 0 20px 40px rgba(0,0,0,.35)
+  }
+  .q-head{display:flex; justify-content:space-between; align-items:flex-end; gap:1rem; margin-bottom:.6rem}
+  .q-title{font-size:clamp(1.1rem, 1.4vw + .9rem, 1.9rem); font-weight:900; line-height:1.2; margin:0; text-shadow:0 1px 0 #000}
+  .q-meta{color:var(--muted); font-weight:700}
+  .answers{display:grid; gap:.6rem; margin-top:.6rem}
+  .row{
+    display:grid; grid-template-columns: 2.4rem 1fr 4.4rem; gap:.7rem; align-items:center;
+    padding:.7rem .9rem; background:var(--card); border:1px solid var(--border); border-radius:.7rem;
+    cursor:pointer; transition: transform .06s ease-in-out, background .2s;
+  }
+  .row:active{ transform: scale(.99) }
+  .idx{font-weight:900; color:#9da3a1; text-align:center}
+  .label{font-weight:900; letter-spacing:.2px; text-shadow:0 1px 0 #000}
+  .points{font-weight:900; text-align:center; color:#1a1607; background:var(--gold); border-radius:.5rem; padding:.25rem .45rem}
+  .row.hidden .label::after{content:"XXXXX"}
+  .row.hidden .label{color:#b9c7c1}
+  .footer-note{color:var(--muted); text-align:center; padding:1rem; font-size:.9rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>Tablero — “100 mexicanos dijeron” (clic para revelar)</h1>
+  <div class="controls">
+    <button id="random">Siguiente pregunta aleatoria</button>
+    <button id="fullscreen" class="ghost">Pantalla completa</button>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <div class="q-head">
+      <h2 class="q-title" id="qTitle">Cargando…</h2>
+      <div class="q-meta"><span id="qIndex">–</span> / <span id="qCount">–</span> · TOTAL: <strong id="qTotal">–</strong></div>
+    </div>
+    <div class="answers" id="answers" aria-live="polite"></div>
+  </section>
+</main>
+<div class="footer-note">Selecciona cada fila para revelar su respuesta. Solo hay botón de “Siguiente pregunta aleatoria”.</div>
+
+<script>
+(function(){
+  const DATA = [{"q": "¿Qué llevas siempre a la capilla?", "answers": [{"label": "Escrituras / Libro de Mormón", "points": 9}, {"label": "Vestimenta formal (camisa blanca, falda, vestido)", "points": 8}, {"label": "Manual / “Ven, sígueme”", "points": 4}, {"label": "Pluma / lápiz", "points": 3}, {"label": "Teléfono (para himnos o notas)", "points": 3}], "total": 27}, {"q": "Algo que nunca falta en la Noche de Hogar", "answers": [{"label": "Oración familiar", "points": 8}, {"label": "Lección breve (estudio/tema)", "points": 7}, {"label": "Juego o actividad familiar", "points": 6}, {"label": "Cantar un himno o canción", "points": 5}, {"label": "Refrigerio / compartir comida", "points": 3}], "total": 29}, {"q": "Una responsabilidad importante del obispo", "answers": [{"label": "Entrevistas / consejería espiritual", "points": 8}, {"label": "Ayuda y visitas a necesitados / bienestar", "points": 7}, {"label": "Presidir y organizar la congregación", "points": 6}, {"label": "Administrar ofrendas/ayuno", "points": 4}, {"label": "Supervisar programa de jóvenes", "points": 3}], "total": 28}, {"q": "Actividad típica en un campamento de jóvenes", "answers": [{"label": "Fogata y testimonios", "points": 9}, {"label": "Juegos y deportes", "points": 6}, {"label": "Actividades espirituales / clases", "points": 5}, {"label": "Caminatas / excursiones", "points": 4}, {"label": "Cocina o manualidades", "points": 3}], "total": 27}, {"q": "Algo que los misioneros hacen todos los días", "answers": [{"label": "Estudiar las Escrituras", "points": 10}, {"label": "Oración personal", "points": 6}, {"label": "Enseñar / visitar interesados", "points": 5}, {"label": "Estudio del idioma / preparación", "points": 3}, {"label": "Escribir a la familia / informes", "points": 2}], "total": 26}, {"q": "Comida típica que no puede faltar en el 15 de septiembre", "answers": [{"label": "Pozole", "points": 10}, {"label": "Tostadas", "points": 6}, {"label": "Tacos", "points": 6}, {"label": "Tamales", "points": 5}, {"label": "Chiles en nogada", "points": 3}], "total": 30}, {"q": "Algo que se escucha en un testimonio", "answers": [{"label": "“Sé que esta iglesia es verdadera”", "points": 9}, {"label": "“Sé que Jesucristo vive”", "points": 7}, {"label": "“Estoy agradecido por mi familia”", "points": 5}, {"label": "“El Libro de Mormón me cambió”", "points": 4}, {"label": "“Dios respondió a mis oraciones”", "points": 3}], "total": 28}, {"q": "Una prenda típica mexicana", "answers": [{"label": "Sombrero", "points": 9}, {"label": "Sarape", "points": 7}, {"label": "Huipil / blusa bordada", "points": 5}, {"label": "Traje de charro", "points": 5}, {"label": "Rebozo", "points": 3}], "total": 29}, {"q": "Un héroe de la independencia de México", "answers": [{"label": "Miguel Hidalgo", "points": 10}, {"label": "José María Morelos", "points": 7}, {"label": "Vicente Guerrero", "points": 5}, {"label": "Ignacio Allende", "points": 5}, {"label": "Josefa Ortiz de Domínguez", "points": 3}], "total": 30}, {"q": "Lo que los niños aprenden en la Primaria", "answers": [{"label": "Orar / cómo orar", "points": 8}, {"label": "Cantar himnos / canciones religiosas", "points": 6}, {"label": "Historias de las Escrituras", "points": 5}, {"label": "Ser reverentes / buenos modales", "points": 4}, {"label": "Conocer a Jesucristo / amor por Él", "points": 3}], "total": 26}];
+  const el = id => document.getElementById(id);
+  const qCountEl = el('qCount');
+  const qIndexEl = el('qIndex');
+  const qTitleEl = el('qTitle');
+  const qTotalEl = el('qTotal');
+  const answersEl = el('answers');
+
+  let current = 0;
+
+  function renderQuestion(){
+    const q = DATA[current];
+    if(qCountEl) qCountEl.textContent = DATA.length;
+    if(qIndexEl) qIndexEl.textContent = current + 1;
+    qTitleEl.textContent = (current+1) + ') ' + q.q;
+    qTotalEl.textContent = q.total;
+    answersEl.innerHTML = '';
+    q.answers.forEach((a, idx) => {
+      const row = document.createElement('div');
+      row.className = 'row hidden';
+      row.dataset.idx = idx;
+      row.innerHTML = '<div class="idx">' + (idx+1) + '</div>' +
+                      '<div class="label"></div>' +
+                      '<div class="points">' + a.points + '</div>';
+      row.addEventListener('click', () => {
+        if(row.classList.contains('hidden')){
+          row.classList.remove('hidden');
+          row.querySelector('.label').textContent = a.label;
+        }else{
+          row.classList.add('hidden');
+          row.querySelector('.label').textContent = '';
+        }
+      });
+      answersEl.appendChild(row);
+    });
+  }
+
+  // Botón “Siguiente pregunta aleatoria”
+  document.getElementById('random').addEventListener('click', () => {
+    let n;
+    do{ n = Math.floor(Math.random()*DATA.length) } while (n === current && DATA.length > 1);
+    current = n;
+    renderQuestion();
+  });
+
+  // Pantalla completa
+  document.getElementById('fullscreen').addEventListener('click', () => {
+    const root = document.documentElement;
+    if(!document.fullscreenElement){
+      if(root.requestFullscreen) root.requestFullscreen();
+    }else{
+      if(document.exitFullscreen) document.exitFullscreen();
+    }
+  });
+
+  // Primer render
+  renderQuestion();
+})();
+</script>
+</body>
+</html>
